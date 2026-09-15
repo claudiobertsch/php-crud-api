@@ -3,8 +3,10 @@
 // des gesamten Repos.
 //
 // Zweck: die Frage „wo ist Funktion X?" beantworten, ohne wiederholt breit zu greppen
-// (= Token-Verbrauch), und toten Code sichtbar machen. Regex-Index, KEIN AST — dynamische
-// Aufrufe (Framework-Lifecycle, `call_user_func`, magische Methoden) können fehlen.
+// (= Token-Verbrauch), und toten Code sichtbar machen. Jeder Eintrag trägt seine Zeilennummer
+// (`:42`), sodass Überschrift + Nummer die anspringbare Fundstelle `pfad/datei.ext:42` ergeben.
+// Regex-Index, KEIN AST — dynamische Aufrufe (Framework-Lifecycle, `call_user_func`, magische
+// Methoden) können fehlen.
 //
 // Aufruf:  node .claude/tools/codemap.mjs   (von überall im Repo)
 // Ausgabe: CODEMAP.md im Wurzelverzeichnis des Repos.
@@ -119,11 +121,11 @@ function parsePhp(lines) {
   const reFn = /^\s*(?:(?:final|abstract|public|private|protected|static)\s+)*function\s+([A-Za-z_]\w*)\s*\(/;
   lines.forEach((line, idx) => {
     const mt = reType.exec(line);
-    if (mt) types.push({ kind: mt[1], name: mt[2] });
+    if (mt) types.push({ kind: mt[1], name: mt[2], line: idx + 1 });
     const mf = reFn.exec(line);
     if (mf) {
       const vis = /\b(private|protected)\b/.test(line) ? (line.includes('private') ? 'private ' : 'protected ') : '';
-      fns.push({ name: mf[1], sig: `${vis}${mf[1]}()`, doc: leadingDoc(lines, idx, ['//']) });
+      fns.push({ name: mf[1], sig: `${vis}${mf[1]}()`, doc: leadingDoc(lines, idx, ['//']), line: idx + 1 });
     }
   });
   return { fns, types };
@@ -136,7 +138,7 @@ function parsePy(lines) {
   const reDef = /^(\s*)(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/;
   lines.forEach((line, idx) => {
     const mc = reClass.exec(line);
-    if (mc) types.push({ kind: 'class', name: mc[2] });
+    if (mc) types.push({ kind: 'class', name: mc[2], line: idx + 1 });
     const md = reDef.exec(line);
     if (md) {
       const nested = md[1].length > 0;
@@ -147,7 +149,7 @@ function parsePy(lines) {
         const ds = /^[rbuf]*("""|''')(.*)/.exec(nx);
         if (ds && ds[2].trim()) doc = ds[2].replace(/("""|''').*$/, '').trim();
       }
-      fns.push({ name: md[2], sig: `${nested ? '· ' : ''}${md[2]}()`, doc });
+      fns.push({ name: md[2], sig: `${nested ? '· ' : ''}${md[2]}()`, doc, line: idx + 1 });
     }
   });
   return { fns, types };
@@ -163,14 +165,14 @@ function parseJs(lines) {
   const KW = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'else', 'do']);
   lines.forEach((line, idx) => {
     const mc = reClass.exec(line);
-    if (mc) types.push({ kind: 'class', name: mc[1] });
+    if (mc) types.push({ kind: 'class', name: mc[1], line: idx + 1 });
     let m = reFnDecl.exec(line) || reArrow.exec(line);
     if (!m && reMethod.test(line)) {
       const mm = reMethod.exec(line);
       if (mm && !KW.has(mm[1])) m = mm;
     }
     if (m && !KW.has(m[1])) {
-      fns.push({ name: m[1], sig: `${m[1]}()`, doc: leadingDoc(lines, idx, ['//']) });
+      fns.push({ name: m[1], sig: `${m[1]}()`, doc: leadingDoc(lines, idx, ['//']), line: idx + 1 });
     }
   });
   return { fns, types };
@@ -239,7 +241,7 @@ for (const p of parsed) {
       !/^test/i.test(f.name) &&
       !magic
     ) {
-      dead.push({ file: p.file, name: f.name });
+      dead.push({ file: p.file, name: f.name, line: f.line });
     }
   }
 }
@@ -257,6 +259,11 @@ out.push('');
 out.push('> **AUTO-GENERIERT** von `.claude/tools/codemap.mjs` — NICHT von Hand editieren. Nach');
 out.push('> größeren Änderungen neu erzeugen: `node .claude/tools/codemap.mjs`. Zweck: „wo ist');
 out.push('> Funktion X?" sofort beantworten + toten Code finden, statt zu greppen (spart Zeit & Tokens).');
+out.push('');
+out.push(
+  '`:42` hinter einem Eintrag ist seine Zeilennummer in der Datei der jeweiligen Überschrift — ' +
+    'beides zusammen ergibt die anspringbare Fundstelle `pfad/datei.ext:42`.'
+);
 out.push('');
 const langs = [...langCounts].sort((a, b) => b[1] - a[1]).map(([l, n]) => `${l} ${n}`).join(' · ');
 out.push(
@@ -284,11 +291,13 @@ for (const comp of comps) {
   out.push('');
   for (const p of group) {
     const rel = p.file.startsWith(comp + '/') ? p.file.slice(comp.length + 1) : p.file;
-    const typeStr = p.types.length ? ' — ' + p.types.map((t) => `\`${t.kind} ${t.name}\``).join(', ') : '';
+    const typeStr = p.types.length
+      ? ' — ' + p.types.map((t) => `\`${t.kind} ${t.name}\` \`:${t.line}\``).join(', ')
+      : '';
     out.push(`### ${rel} \`[${p.lang}]\`${typeStr}`);
     if (p.fns.length) {
       for (const f of p.fns) {
-        out.push(`- \`${f.sig}\`${f.doc ? ' — ' + f.doc : ' — _⟨undok.⟩_'}`);
+        out.push(`- \`${f.sig}\` \`:${f.line}\`${f.doc ? ' — ' + f.doc : ' — _⟨undok.⟩_'}`);
       }
     }
     out.push('');
@@ -305,7 +314,7 @@ out.push(
 out.push('');
 if (dead.length) {
   for (const d of dead.sort((a, b) => a.file.localeCompare(b.file))) {
-    out.push(`- \`${d.name}()\` — ${d.file}`);
+    out.push(`- \`${d.name}()\` — ${d.file}:${d.line}`);
   }
 } else {
   out.push('_Keine Kandidaten gefunden._');

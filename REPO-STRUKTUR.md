@@ -18,6 +18,17 @@ Jeder betriebene Dienst ist ein **eigenes Docker-Image**. Betrieben wird über C
 - Im Compose-File steht `image:`, nie `build:`. Gebaut wird in der CI, je Image einzeln.
 - Kein Dienst läuft „aus dem Wurzelverzeichnis heraus". Anwendungscode liegt immer in dem
   Verzeichnis, aus dem sein Image gebaut wird.
+- **Die Konfiguration eines Dienstes gehört in sein Image**, nicht als Bind-Mount neben das
+  Compose-File. Auch ein Dienst, der nur aus einem Standardimage plus einer Konfigurationsdatei
+  besteht, bekommt deshalb ein eigenes Image-Verzeichnis: darin ein `Dockerfile` mit
+  `FROM <standardimage>` und die Konfiguration daneben. Sonst hängt das Laufzeitverhalten des
+  Containers davon ab, aus welchem Verzeichnis jemand Compose aufgerufen hat — statt am Image zu
+  hängen, das in der Registry liegt und einen Stand hat.
+- **Bind-Mounts sind für Daten da**, nicht für Konfiguration: Datenverzeichnisse, Ablagen,
+  Protokolle. Ein Standardimage ohne eigene Konfiguration kommt weiterhin direkt aus dem Compose-File.
+- Ein eigenes Image **friert sein Basis-Image ein**: eine Sicherheitsaktualisierung des
+  Basis-Images erreicht den Stack erst mit einem Neubau. Die CI baut deshalb nicht nur bei
+  Änderungen, sondern zusätzlich turnusmäßig alle Images neu.
 - Was sich nicht containerisieren lässt (native Desktop- oder Mobile-Clients), bekommt trotzdem
   ein eigenes Verzeichnis auf oberster Ebene — es hängt nur nicht am Compose-Stack.
 
@@ -53,6 +64,8 @@ deren Verzeichnis.
   `docker-compose_<zweck>/`. Der Suffix benennt den Zweck, nie eine laufende Nummer.
 - Jedes Stack-Verzeichnis enthält das Compose-File **und die zugehörige Env-Datei** — beides
   beieinander, damit der Startbefehl eindeutig ist und kein Stack die Werte eines anderen zieht.
+- **Mehr nicht.** Konfigurationsdateien einzelner Dienste liegen in deren Image-Verzeichnis
+  (s. Grundsatz oben); ein Stack-Verzeichnis, in dem ein Konfigurationsbaum steht, ist ein Befund.
 - Die Env-Datei enthält ausschließlich Platzhalter; Produktivwerte werden nie committet
   (CLAUDE.md Regel 9).
 - Der Startbefehl je Stack steht in der README.
@@ -64,9 +77,12 @@ deren Verzeichnis.
 - Benennung `<rolle>_<name>`, durchgehend klein: die Rolle ordnet grob ein (etwa Web-Anwendung,
   Datenverarbeitung, Medien), danach folgt der sprechende Name. Der **Unterstrich** trennt Rolle
   und Name, **Bindestriche** gliedern den Namen.
-- Jedes Image-Verzeichnis ist für sich vollständig: `Dockerfile`, Quellcode, Abhängigkeitsdateien
-  und — sobald es nicht trivial ist — eine eigene `README.md`.
-- Die CI baut je Verzeichnis einzeln und nur, wenn sich darin etwas geändert hat.
+- Jedes Image-Verzeichnis ist für sich vollständig: `Dockerfile`, Quellcode, Konfiguration,
+  Abhängigkeitsdateien und — sobald es nicht trivial ist — eine eigene `README.md`.
+- Ein Verzeichnis, das nur ein `Dockerfile` mit `FROM <standardimage>` und eine Konfigurationsdatei
+  enthält, ist **kein Zeichen von Überbau**, sondern der Normalfall für Infrastrukturdienste.
+- Die CI baut je Verzeichnis einzeln und nur, wenn sich darin etwas geändert hat — plus den
+  turnusmäßigen Lauf über alle Images (s. Grundsatz oben).
 
 ## Komponenten ohne Image
 
