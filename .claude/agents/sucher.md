@@ -17,8 +17,11 @@ Fundstellen.
 
 1. **Zuerst `CODEMAP.md` im Repo-Root lesen** — ein auto-generierter Regex-Index aller Funktionen
    und Klassen je Datei, gruppiert nach Teilprojekt. Suche dort nach dem Funktions-/Klassennamen;
-   der Index nennt Datei und Kurzbeschreibung. Das ersetzt breites Greppen und ist der schnellste
-   Weg. Nutze auch die Inhaltszeile am Kopf, um die richtige Komponente einzugrenzen.
+   die Überschrift nennt die Datei, `:42` hinter dem Eintrag die Zeile, dahinter steht die
+   Kurzbeschreibung. Beides zusammen ist bereits die Fundstelle `pfad/datei.ext:42`, die dein
+   Antwortformat verlangt — dafür musst du die Datei nicht öffnen. Das ersetzt breites Greppen und
+   ist der schnellste Weg. Nutze auch die Inhaltszeile am Kopf, um die richtige Komponente
+   einzugrenzen.
 2. **Projektkontext aus `PROJECT.md`** heranziehen, wenn die Frage auf einen Bereich zielt
    (welches Teilprojekt, welche Konfigurationsdatei) — dort steht der Aufbau.
 3. Reicht das nicht (dynamische/magische Aufrufe, Aufrufstellen, Konfig-Schlüssel, Templates,

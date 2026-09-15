@@ -58,8 +58,15 @@ steht hier ausschließlich für den Fall, dass ein anderes System die Datenbank 
 
 | Technologie | Verbindlich | Warum |
 |---|---|---|
-| nginx | `1.27-alpine` | — |
+| nginx | `1.27-alpine` | der eine Webserver und Reverse Proxy — eine Konfigurationssprache, ein Satz Betriebswissen |
+| Caddy | — | kein zweiter Webserver |
 | Redis | `7-alpine` | — |
+
+Vor php-fpm, vor einer Anwendung, als Reverse Proxy: **immer nginx**. Automatisches TLS ist der
+übliche Grund, es anders zu machen, und er trägt nicht: Zertifikate holt ein ACME-Client daneben,
+nicht der Webserver selbst. Wo viele oder wechselnde Hostnamen im Spiel sind, ist das Mittel ein
+Wildcard-Zertifikat — nicht eine zweite Webserver-Technologie, die jeder, der den Stack anfasst,
+zusätzlich beherrschen muss.
 
 ## Abhängigkeiten und Tags
 
@@ -79,9 +86,10 @@ den Commit festhält.
 
 | Action | Verbindlich |
 |---|---|
-| `actions/checkout` | `v6` |
+| `actions/checkout` | `v7` |
 | `actions/create-github-app-token` | `v3` |
-| `actions/setup-node` · `setup-dotnet` | `v4` |
+| `actions/setup-node` | `v7` |
+| `actions/setup-dotnet` | `v6` |
 | `docker/setup-buildx-action` · `docker/login-action` | `v4` |
 | `docker/build-push-action` | `v7` |
 
@@ -90,9 +98,7 @@ den Commit festhält.
 ## Eine Version anheben
 
 1. Den Wert **hier** ändern — samt Grund, falls er sich mitändert.
-2. Die Vorlage (`rw-project-template` bzw. das Stack-Template) nachziehen, damit das nächste
-   Projekt den neuen Wert von selbst bekommt.
-3. Bestehende Repos ziehen **nicht** automatisch nach. Jedes Upgrade ist ein eigener, ausdrücklich
+2. Bestehende Repos ziehen **nicht** automatisch nach. Jedes Upgrade ist ein eigener, ausdrücklich
    beauftragter Vorgang im jeweiligen Repo (CLAUDE.md Regel 10) — bis dahin steht die Abweichung
    in der Spalte *Bestand*.
 

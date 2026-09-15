@@ -82,7 +82,9 @@ diese Datei zu schreiben.
     halten, aussagekräftige Commit-Messages. Die im Projekt vorhandenen Tests, Linter und
     Typprüfungen **ausführen**, nicht nur erwähnen (welche das sind: PROJECT.md). Keine
     unverifizierten Erfolgsmeldungen: Was nicht getestet oder nicht ausgeführt wurde, wird als
-    solches benannt — ebenso fehlgeschlagene Prüfungen. Im Pull Request wird die zentrale
+    solches benannt — ebenso fehlgeschlagene Prüfungen. Das Ausführen selbst geht an den Subagent
+    **`pruefer`**: er lässt die Prüfungen in seinem eigenen Kontext laufen und meldet Urteil und
+    Fehlerstellen statt der Protokolle. Im Pull Request wird die zentrale
     Vorlage ausgefüllt, nicht gelöscht: sie fragt genau diese Punkte ab.
 
 12. **Dokumentation aktuell halten.** Jede Änderung (Feature, Konfiguration, Service, Löschung) wird
